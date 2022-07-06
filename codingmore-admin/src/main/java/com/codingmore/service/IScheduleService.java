@@ -5,12 +5,12 @@ import org.quartz.Job;
 import java.util.Date;
 
 /**
- * 微信搜索「沉默王二」，回复 Java
- *
- * @author 沉默王二
- * @date 4/25/22
+ * @Author yaCoding
+ * @create 2022-07-05 下午 2:49
  */
+
 public interface IScheduleService {
+
     /**
      * 通过 Cron 表达式来调度任务
      */

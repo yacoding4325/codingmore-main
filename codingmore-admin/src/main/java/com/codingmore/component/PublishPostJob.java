@@ -2,7 +2,6 @@ package com.codingmore.component;
 
 import com.codingmore.service.IPostsService;
 import com.codingmore.service.IScheduleService;
-import com.codingmore.service.IUsersService;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,18 +9,17 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
 
 /**
- *
- * 定时发布文章
- * 微信搜索「沉默王二」，回复 Java
- *
- * @author 沉默王二
- * @date 4/25/22
+ * @Author yaCoding
+ * @create 2022-07-05 下午 2:41
  */
+
 @Slf4j
 @Component
 public class PublishPostJob extends QuartzJobBean {
+
     @Autowired
     private IScheduleService scheduleService;
+
     @Autowired
     private IPostsService postsService;
 
@@ -43,3 +41,4 @@ public class PublishPostJob extends QuartzJobBean {
         }
     }
 }
+

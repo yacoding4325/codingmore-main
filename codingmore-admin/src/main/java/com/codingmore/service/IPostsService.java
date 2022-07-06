@@ -1,22 +1,18 @@
 package com.codingmore.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.codingmore.dto.PostsPageQueryParam;
 import com.codingmore.dto.PostsParam;
 import com.codingmore.model.Posts;
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.codingmore.vo.PostsVo;
-
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * <p>
- * 文章 服务类
- * </p>
- *
- * @author 石磊
- * @since 2021-09-12
+ * @Author yaCoding
+ * @create 2022-07-05 下午 2:42
  */
+
 public interface IPostsService extends IService<Posts> {
     /**
      * 保存内容

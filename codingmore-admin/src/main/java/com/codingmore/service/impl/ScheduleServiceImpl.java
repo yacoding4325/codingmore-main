@@ -11,24 +11,22 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 
 /**
- *
- * Quartz定时任务操作实现类
- *
- * 微信搜索「沉默王二」，回复 Java
- *
- * @author 沉默王二
- * @date 4/25/22
+ * @Author yaCoding
+ * @create 2022-07-05 下午 3:09
  */
+
 @Slf4j
 @Service
 public class ScheduleServiceImpl implements IScheduleService {
-    private String defaultGroup = "default_group";
 
     @Autowired
     private Scheduler scheduler;
+
+    private String defaultGroup = "default_group";
+
     @Override
     public String scheduleJob(Class<? extends Job> jobBeanClass, String cron, String data) {
-        String jobName = UUID.fastUUID().toString();
+        String jobName =  UUID.fastUUID().toString();
         JobDetail jobDetail = JobBuilder.newJob(jobBeanClass)
                 .withIdentity(jobName, defaultGroup)
                 .usingJobData("data", data)

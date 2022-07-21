@@ -21,5 +21,4 @@ public class Asserts {
         throw new ApiException(errorCode);
     }
 
-
 }

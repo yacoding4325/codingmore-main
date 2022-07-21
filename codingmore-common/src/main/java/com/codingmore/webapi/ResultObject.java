@@ -9,6 +9,7 @@ package com.codingmore.webapi;
  * 通用返回对象
  * Created by zhanglei on 2019/4/19.
  */
+
 public class ResultObject<T> {
     private long code;
     private String message;

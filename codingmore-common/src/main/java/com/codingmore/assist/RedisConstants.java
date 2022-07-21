@@ -32,5 +32,4 @@ public class RedisConstants {
         return REDIS_WEB_DATABASE + ":" + POST_LIKE_COUNT + ":" + lastKey;
     }
 
-
 }

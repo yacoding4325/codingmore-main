@@ -12,10 +12,13 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * @Author yaCoding
- * @create 2022-07-05 下午 8:52
+ * <p>
+ * 文章 Mapper 接口
+ * </p>
+ *
+ * @author 石磊
+ * @since 2021-09-12
  */
-
 public interface PostsMapper extends BaseMapper<Posts> {
 
     IPage<PostsVo> findByPage(IPage<PostsVo> page, @Param(Constants.WRAPPER) Wrapper<PostsPageQueryParam> wrapper);

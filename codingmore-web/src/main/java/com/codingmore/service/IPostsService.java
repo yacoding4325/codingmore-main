@@ -12,6 +12,10 @@ import java.util.List;
  * @create 2022-07-25 下午 10:55
  */
 
+/**
+ * 文章 服务类
+ */
+
 public interface IPostsService extends IService<Posts> {
     List<PostsVo> findByPageWithTagPaged(PostsPageQueryParam postsPageQueryParam);
 }

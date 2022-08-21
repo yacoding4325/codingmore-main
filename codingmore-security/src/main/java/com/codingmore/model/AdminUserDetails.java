@@ -1,10 +1,5 @@
 package com.codingmore.model;
 
-/**
- * @Author yaCoding
- * @create 2022-07-26 下午 8:57
- */
-
 import com.codingmore.state.UserStatus;
 import io.github.classgraph.Resource;
 import org.springframework.security.core.GrantedAuthority;

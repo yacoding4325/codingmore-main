@@ -5,15 +5,8 @@ import com.codingmore.util.WebRequestParam;
 import org.springframework.stereotype.Service;
 
 /**
- * @Author yaCoding
- * @create 2022-07-26 下午 8:39
- */
-
-/*
-/**
  * 栏目请求处理策略
  */
-
 @Service("channelPageRequestStrategy")
 public class ChannelPageRequestStrategy implements ILearnWebRequestStrategy {
     @Override

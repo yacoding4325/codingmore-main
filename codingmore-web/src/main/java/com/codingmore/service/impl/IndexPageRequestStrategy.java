@@ -1,10 +1,5 @@
 package com.codingmore.service.impl;
 
-/**
- * @Author yaCoding
- * @create 2022-07-26 下午 5:38
- */
-
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -23,63 +18,65 @@ import com.codingmore.vo.SiteVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 /**
  * 首页请求处理策略
  */
-
 @Service("indexPageRequestStrategy")
 public class IndexPageRequestStrategy implements ILearnWebRequestStrategy {
+    private static final String INDEX_PAGE = "index.html";
+    /**
+     * 站点栏目内容信息
+     */
+    private static final String INDEX_TERM_TAXONOMY_POST_VO = "indexTermTaxonomyPostVo";
+    /**
+     * 站点信息
+     */
+    private static final String SITE_CONFIG = "siteConfig";
+    
+    /**
+     * 文章分页列表
+     */
+    private static final String POSTS_ITEMS = "postsItems";
+    /**
+     * 、文章条数
+     */
+    private static final String POSTS_TOTAL= "postsTotal";
+    @Autowired
+    private ISiteService siteService;
+    @Autowired
+    private ITermTaxonomyService termTaxonomyService;
+    @Autowired
+    private IPostsService postsService;
 
- private static final String INDEX_PAGE = "index.html";
- /**
-  * 站点栏目内容信息
-  */
- private static final String INDEX_TERM_TAXONOMY_POST_VO = "indexTermTaxonomyPostVo";
- /**
-  * 站点信息
-  */
- private static final String SITE_CONFIG = "siteConfig";
+    @Override
+    public String handleRequest(WebRequestParam webRequestParam) {
 
- /**
-  * 文章分页列表
-  */
- private static final String POSTS_ITEMS = "postsItems";
-   /**
-    * 、文章条数（前端列表暂时没用上）
-    */
-   private static final String POSTS_TOTAL= "postsTotal";
+        List<Site> siteList = siteService.list();
+        //处理站点配置
+        if(siteList.size() > 0) {
+            Site site = siteList.get(0);
+            SiteVo siteVo = new SiteVo();
+            BeanUtils.copyProperties(site, siteVo);
+            webRequestParam.getRequest().setAttribute(SITE_CONFIG, siteVo);
+        }
 
-   @Autowired
-   private ISiteService siteService;
+        PostsPageQueryParam pageQueryParam = new PostsPageQueryParam();
+        pageQueryParam.setPage(webRequestParam.getPage());
+        pageQueryParam.setAsc(webRequestParam.isAsc());
+        pageQueryParam.setOrderBy(webRequestParam.getOrderBy());
+        /* pageQueryParam.setOrderBy("post_date"); */
+        pageQueryParam.setPageSize(webRequestParam.getPageSize());
+        pageQueryParam.setPostStatus(PostStatus.PUBLISHED.toString());
+        pageQueryParam.setTermTaxonomyId(webRequestParam.getChannelId());
 
-   @Autowired
-   private ITermTaxonomyService termTaxonomyService;
-
-   @Autowired
-   private IPostsService postsService;
-
-   @Override
-   public String handleRequest(WebRequestParam webRequestParam) {
-
-    List<Site> siteList = siteService.list();
-    //处理站点配置
-    if(siteList.size() > 0) {
-     Site site = siteList.get(0);
-     SiteVo siteVo = new SiteVo();
-     BeanUtils.copyProperties(site, siteVo);
-     webRequestParam.getRequest().setAttribute(SITE_CONFIG, siteVo);
+        IPage<PostsVo> pageVo = postsService.findByPageWithTag(pageQueryParam);
+        //设置浏览量
+        pageVo.getRecords().forEach(postsVo -> {
+            postsVo.setLikeCount(Long.parseLong(String.valueOf(postsService.getLikeCount(postsVo.getPostsId()))));
+        });
+        webRequestParam.getRequest().setAttribute(POSTS_ITEMS,pageVo.getRecords());
+        webRequestParam.getRequest().setAttribute(POSTS_TOTAL,pageVo.getTotal());
+        return INDEX_PAGE;
     }
-
-    PostsPageQueryParam pageQueryParam = new PostsPageQueryParam();
-    pageQueryParam.setPage(webRequestParam.getPage());
-    pageQueryParam.setAsc(webRequestParam.isAsc());
-    pageQueryParam.setOrderBy(webRequestParam.getOrderBy());
-    pageQueryParam.setPageSize(webRequestParam.getPageSize());
-    pageQueryParam.setPostStatus(PostStatus.PUBLISHED.toString());
-    pageQueryParam.setTermTaxonomyId(webRequestParam.getChannelId());
-
-    List<PostsVo> pageVoList = postsService.findByPageWithTagPaged(pageQueryParam);
-    webRequestParam.getRequest().setAttribute(POSTS_ITEMS, pageVoList);
-    return INDEX_PAGE;
-   }
 }

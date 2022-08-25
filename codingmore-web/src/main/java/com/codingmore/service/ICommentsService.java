@@ -1,15 +1,14 @@
 package com.codingmore.service;
 
-/**
- * @Author yaCoding
- * @create 2022-07-26 下午 4:48
- */
-
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.codingmore.model.Comments;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
- * * 评论表 服务类
+ * <p>
+ * 评论表 服务类
+ * </p>
+
  */
 public interface ICommentsService extends IService<Comments> {
+
 }

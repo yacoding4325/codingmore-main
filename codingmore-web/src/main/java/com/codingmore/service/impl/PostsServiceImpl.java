@@ -3,52 +3,86 @@ package com.codingmore.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.codingmore.assist.RedisConstants;
 import com.codingmore.dto.PostsPageQueryParam;
-import com.codingmore.mapper.PostsMapper;
 import com.codingmore.model.*;
+import com.codingmore.mapper.PostsMapper;
 import com.codingmore.service.*;
 import com.codingmore.state.PostStatus;
 import com.codingmore.util.CusAccessObjectUtil;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.codingmore.vo.PostsVo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * @Author yaCoding
- * @create 2022-07-26 下午 4:55
- */
+import javax.servlet.http.HttpServletRequest;
 
-/*
-文章 服务实现类
+/**
+ * <p>
+ * 文章 服务实现类
+ * </p>
+ *
+ * @author 石磊
+ * @since 2021-09-12
  */
 @Service
 public class PostsServiceImpl extends ServiceImpl<PostsMapper, Posts> implements IPostsService {
-
     @Autowired
     private IUsersService iUsersService;
-
     @Autowired
     private ITermRelationshipsService iTermRelationshipsService;
-
     @Autowired
     private IPostTagService iPostTagService;
-
     @Autowired
     private IPostTagRelationService iPostTagRelationService;
-
     @Autowired
-    private IRedisService redisService;
+    private RedisService redisService;
+    private static final String PAGE_VIEW_KEY = "pageView";
+    /**
+     * 点赞
+     */
+    private static final String POST_LIKE_COUNT = "likeCount";
+
+    @Override
+    public PostsVo getPostsById(Long id) {
+        Posts posts = this.getById(id);
+        PostsVo postsVo = new PostsVo();
+        if (posts == null) {
+            return postsVo;
+        }
+        BeanUtils.copyProperties(posts, postsVo);
+        QueryWrapper<TermRelationships> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("term_relationships_id", posts.getPostsId());
+        List<TermRelationships> termRelationshipsList = iTermRelationshipsService.list(queryWrapper);
+        if (termRelationshipsList.size() > 0) {
+            postsVo.setTermTaxonomyId(termRelationshipsList.get(0).getTermTaxonomyId());
+        }
+        QueryWrapper<PostTagRelation> tagRelationWrapper = new QueryWrapper<>();
+        tagRelationWrapper.eq("post_id", posts.getPostsId());
+        tagRelationWrapper.orderBy(true,true,"term_order");
+        List<PostTagRelation> postTagRelationList = iPostTagRelationService.list(tagRelationWrapper);
+        if (postTagRelationList.size() > 0) {
+            List<Long> tagIds = postTagRelationList.stream().map(PostTagRelation::getPostTagId).collect(Collectors.toList());
+            QueryWrapper<PostTag> tagQuery = new QueryWrapper<>();
+            tagQuery.in("post_tag_id", tagIds);
+            List<PostTag> postTags = iPostTagService.list(tagQuery);
+            Collections.sort(postTags, new Comparator<PostTag>() {
+                @Override
+                public int compare(PostTag o1, PostTag o2) {
+                    return tagIds.indexOf(o1.getPostTagId())-tagIds.indexOf(o2.getPostTagId());
+                }
+            });
+            postsVo.setTagsName(StringUtils.join(postTags.stream().map(PostTag::getDescription).collect(Collectors.toList()), ","));
+        }
+
+        Users users = iUsersService.getById(posts.getPostAuthor());
+        postsVo.setUserNiceName(users.getUserNicename());
+        return postsVo;
+    }
 
     @Override
     public IPage<PostsVo> findByPageWithTag(PostsPageQueryParam postsPageQueryParam) {
@@ -70,27 +104,6 @@ public class PostsServiceImpl extends ServiceImpl<PostsMapper, Posts> implements
     }
 
     @Override
-    public List<PostsVo> findByPageWithTagPaged(PostsPageQueryParam postsPageQueryParam) {
-        QueryWrapper<PostsPageQueryParam> queryWrapper = new QueryWrapper<>();
-        if (postsPageQueryParam.getTermTaxonomyId() != null) {
-            queryWrapper.eq("b.term_taxonomy_id", postsPageQueryParam.getTermTaxonomyId());
-        }
-        if(StringUtils.isNotBlank(postsPageQueryParam.getPostTitleKeyword())){
-            queryWrapper.like("a.post_title", "%"+postsPageQueryParam.getPostTitleKeyword()+"%");
-        }
-        if (postsPageQueryParam.getOrderBy() != null) {
-            String[] cloums = postsPageQueryParam.getOrderBy().split(",");
-            queryWrapper.orderBy(true, postsPageQueryParam.isAsc(), cloums);
-        }
-        queryWrapper.eq("a.post_status", PostStatus.PUBLISHED.toString());
-        long pageSize = postsPageQueryParam.getPageSize();
-        long pageStart = (postsPageQueryParam.getPage() - 1) * pageSize;
-        Long searchTagId = postsPageQueryParam.getSearchTagId();
-
-        return this.getBaseMapper().findByPageWithTagPaged(queryWrapper, searchTagId, pageStart, pageSize);
-    }
-
-    @Override
     public List<Posts> listByTermTaxonomyId(Long termTaxonomyId) {
         QueryWrapper<TermRelationships> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("term_taxonomy_id", termTaxonomyId);
@@ -99,81 +112,45 @@ public class PostsServiceImpl extends ServiceImpl<PostsMapper, Posts> implements
             List<Long> postIds = termRelationshipsList.stream().map(TermRelationships::getTermRelationshipsId).collect(Collectors.toList());
             return this.listByIds(postIds);
         }
+        
         return new ArrayList<Posts>();
     }
 
     @Override
-    public PostsVo getPostsById(Long id) {
+    public void increasePageView(Long id, HttpServletRequest  request) {
+        String ip = CusAccessObjectUtil.getIpAddress(request);
+        String key = PAGE_VIEW_KEY +":"+ id+":"+ip;
+        if(redisService.get(key) !=null){
+            return;
+        }
+        redisService.incr(key, 1);
         Posts posts = this.getById(id);
-        PostsVo postsVo = new PostsVo();
-        if (posts == null) {
-            return postsVo;
+        Integer pageView = (Integer)redisService.get(key);
+        if(pageView == null || posts == null){
+            return;
         }
-        BeanUtils.copyProperties(posts, postsVo);
-        QueryWrapper<TermRelationships> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("term_relationships_id", posts.getPostsId());
-        List<TermRelationships> termRelationshipsList = iTermRelationshipsService.list(queryWrapper);
-        if (termRelationshipsList.size() > 0) {
-            postsVo.setTermTaxonomyId(termRelationshipsList.get(0).getTermTaxonomyId());
-        }
-
-        QueryWrapper<PostTagRelation> tagRelationWrapper = new QueryWrapper<>();
-        tagRelationWrapper.eq("post_id", posts.getPostsId());
-        tagRelationWrapper.orderBy(true,true,"term_order");
-        List<PostTagRelation> postTagRelationList = iPostTagRelationService.list(tagRelationWrapper);
-        if (postTagRelationList.size() > 0) {
-            List<Long> tagIds = postTagRelationList.stream().map(PostTagRelation::getPostTagId).collect(Collectors.toList());
-            QueryWrapper<PostTag> tagQuery = new QueryWrapper<>();
-            tagQuery.in("post_tag_id", tagIds);
-            List<PostTag> postTags = iPostTagService.list(tagQuery);
-            Collections.sort(postTags, new Comparator<PostTag>() {
-                @Override
-                public int compare(PostTag o1, PostTag o2) {
-                    return tagIds.indexOf(o1.getPostTagId())-tagIds.indexOf(o2.getPostTagId());
-                }
-            });
-            postsVo.setTagsName(StringUtils.join(postTags.stream().map(PostTag::getDescription).collect(Collectors.toList()), ","));
-            postsVo.setTags(postTags);
-        }
-
-        Users users = iUsersService.getById(posts.getPostAuthor());
-        postsVo.setUserNiceName(users.getUserNicename());
-        return postsVo;
+        posts.setPageView(Long.parseLong(String.valueOf(pageView)));
+        this.updateById(posts);
+        
     }
 
     @Override
-    public void increasePageView(Long id, HttpServletRequest request) {
-
-        Posts posts = this.getById(id);
-        if (posts == null) {
-            return;
-        }
-        //通过Redis 来给PV + 1
-        Long pageView = redisService.incr(RedisConstants.getWebPageViewKey(id.toString()),1);
-        //更新 MySQL
-        posts.setPageView(pageView);
-        this.updateById(posts);
+    public int getPageView(Long id) {
+        String key = PAGE_VIEW_KEY +":"+ id+":*";
+        return redisService.countKey(key);
+        
     }
 
     @Override
     public void increaseLikeCount(Long id, HttpServletRequest request) {
         String ip = CusAccessObjectUtil.getIpAddress(request);
-        redisService.incr(RedisConstants.getWebPostLikeKey(id+":"+ip), 1);
-    }
-
-    @Override
-    public int getPageView(Long id) {
-        return redisService.countKey(RedisConstants.getWebPageViewKey(id+":*"));
+        String key = POST_LIKE_COUNT +":"+ id+":"+ip;
+        redisService.incr(key, 1);
     }
 
     @Override
     public int getLikeCount(Long id) {
-        return redisService.countKey(RedisConstants.getWebPostLikeKey(id+":*"));
-    }
-
-    @Override
-    public Boolean hasClickedLike(Long id, HttpServletRequest request) {
-        String ip = CusAccessObjectUtil.getIpAddress(request);
-        return redisService.get(RedisConstants.getWebPostLikeKey(id + ":" + ip)) != null;
+        String key = POST_LIKE_COUNT +":"+ id+":*";
+        return redisService.countKey(key);
     }
 }

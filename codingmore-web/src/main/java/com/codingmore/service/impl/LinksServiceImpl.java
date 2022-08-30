@@ -6,6 +6,8 @@ import com.codingmore.service.ILinksService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+
 /**
  * <p>
  * 链接信息表 服务实现类
@@ -18,5 +20,15 @@ public class LinksServiceImpl extends ServiceImpl<LinksMapper, Links> implements
     @Override
     public boolean save(Links entity) {
         return super.save(entity);
+    }
+
+    @Override
+    public boolean saveBatch(Collection<Links> entityList) {
+        return super.saveBatch(entityList);
+    }
+
+    @Override
+    public boolean saveOrUpdateBatch(Collection<Links> entityList) {
+        return super.saveOrUpdateBatch(entityList);
     }
 }

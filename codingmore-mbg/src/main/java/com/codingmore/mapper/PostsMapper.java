@@ -9,8 +9,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.codingmore.vo.PostsVo;
 import org.apache.ibatis.annotations.Param;
 
-import java.util.List;
-
 /**
  * <p>
  * 文章 Mapper 接口
@@ -23,6 +21,4 @@ public interface PostsMapper extends BaseMapper<Posts> {
 
     IPage<PostsVo> findByPage(IPage<PostsVo> page, @Param(Constants.WRAPPER) Wrapper<PostsPageQueryParam> wrapper);
     IPage<PostsVo> findByPageWithTag(IPage<PostsVo> page, @Param(Constants.WRAPPER) Wrapper<PostsPageQueryParam> wrapper);
-    List<PostsVo> findByPageWithTagPaged(@Param(Constants.WRAPPER) Wrapper<PostsPageQueryParam> wrapper, Long searchTagId, long pageStart, long pageSize);
-
 }
